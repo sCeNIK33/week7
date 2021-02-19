@@ -27,7 +27,7 @@ firebase.auth().onAuthStateChanged(async function(user) {
     // Listen for the form submit and create/render the new post
     document.querySelector('form').addEventListener('submit', async function(event) {
       event.preventDefault()
-      let postUsername = document.querySelector('#username').value
+      let postUsername = user.displayName
       let postImageUrl = document.querySelector('#image-url').value
       let postNumberOfLikes = 0
       let docRef = await db.collection('posts').add({ 
@@ -48,7 +48,9 @@ firebase.auth().onAuthStateChanged(async function(user) {
       let postData = posts[i].data()
       let postUsername = postData.username
       let postImageUrl = postData.imageUrl
-      let postNumberOfLikes = postData.likes
+      let querySnapshot = await db.collection(`likes`).where(`postId`, `==`, postId).get()
+      let postNumberOfLikes = querySnapshot.size
+      //let postNumberOfLikes = postData.likes
       renderPost(postId, postUsername, postImageUrl, postNumberOfLikes)
     }
 
@@ -95,12 +97,31 @@ async function renderPost(postId, postUsername, postImageUrl, postNumberOfLikes)
   document.querySelector(`.post-${postId} .like-button`).addEventListener('click', async function(event) {
     event.preventDefault()
     console.log(`post ${postId} like button clicked!`)
+    
+    let quertSnapshot = await db.collection(`likes`).where(`postId`, `==`, postId).where(`UserId`,`==`,currentUser.uid).get()
+    if (querySnapshot.size == 0) {
+
+ //step 3
+    
+ let currentUser = firebase.auth().currentUser
+    
+ await db.collection(`likes`).add({
+   postId: postId,
+   userId: currentUser.uid
+ })
+ 
+ await db.collection('posts').doc(postId).update({
+   likes: firebase.firestore.FieldValue.increment(1)
+ })
+
     let existingNumberOfLikes = document.querySelector(`.post-${postId} .likes`).innerHTML
     let newNumberOfLikes = parseInt(existingNumberOfLikes) + 1
     document.querySelector(`.post-${postId} .likes`).innerHTML = newNumberOfLikes
-    await db.collection('posts').doc(postId).update({
-      likes: firebase.firestore.FieldValue.increment(1)
-    })
+    
+    }
+   
+
+    
   })
 }
 
